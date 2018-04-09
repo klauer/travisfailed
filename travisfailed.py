@@ -2,7 +2,7 @@
 Usage:
     travisfailed.py <build_url> [--test-prefix=<prefix>] [--diff] [--no-count]
                         [--diff-tool=<diff_tool>] [--save-path=<save_path>]
-                        [--max-diff=<max-diff>] [--verbose]
+                        [--max-diff=<max-diff>] [--verbose] [--skipped]
 
 Options:
     --test-prefix=<prefix>   Relative path prefix shown in py.test
@@ -13,6 +13,7 @@ Options:
     --max-diff=<max-diff>    Maximum number of files to diff
     --verbose                Increase verbosity [default: True]
     --save-path=<save_path>  Save logs to <save_path> [default: build_logs]
+    --skipped                Include skipped test in list
 '''
 
 import subprocess
@@ -167,7 +168,8 @@ def compare_failures_with_tool(jobs, *, diff_tool, diff_tool_args=None,
 
 def main(build_url, *, verbose=False, save_path='build_logs',
          test_prefix='caproto/tests', count_failed=False,
-         run_diff=False, diff_tool='vimdiff', max_diff=None):
+         run_diff=False, diff_tool='vimdiff', max_diff=None,
+         skipped=False):
 
     if 'api.travis-ci.org' not in build_url:
         build_url = build_url.replace('travis-ci.org/',
@@ -179,6 +181,7 @@ def main(build_url, *, verbose=False, save_path='build_logs',
         list_jobs(jobs)
 
     failed_tests = Counter()
+    skipped_tests = Counter()
     for id_, job in jobs.items():
         if job['state'] not in ('failed', 'errored'):
             continue
@@ -200,22 +203,36 @@ def main(build_url, *, verbose=False, save_path='build_logs',
                     print(line, file=f)
 
         job['log'] = log_lines
-        failed = grep_log_for_tests(log_lines, test_prefix,
-                                    markers=('FAILED', 'ERROR'),
-                                    verbose=verbose)
-        for failed_test in failed:
-            failed_tests[failed_test] += 1
+
+        for test in grep_log_for_tests(log_lines, test_prefix,
+                                       markers=('FAILED', 'ERROR'),
+                                       verbose=verbose):
+            failed_tests[test] += 1
+
+        if skipped:
+            for test in grep_log_for_tests(log_lines, test_prefix,
+                                           markers=('SKIPPED', ),
+                                           verbose=verbose):
+                skipped_tests[test] += 1
 
         if verbose:
             print()
             print()
             print()
 
+    if skipped and skipped_tests:
+        print('Skip Count / Tests')
+        print('---------------------')
+        for test, count in skipped_tests.items():
+            print(f'{count} {test}')
+        print()
+
     if count_failed:
         print('Failure Count / Tests')
         print('---------------------')
         for test, count in failed_tests.items():
             print(f'{count} {test}')
+        print()
 
     if run_diff:
         compare_failures_with_tool(jobs, diff_tool=diff_tool,
@@ -232,6 +249,7 @@ if __name__ == '__main__':
     count_failed = not parsed['--no-count']
     verbose = parsed['--verbose']
     save_path = parsed['--save-path']
+    skipped = parsed['--skipped']
 
     if save_path and not os.path.exists(save_path):
         os.makedirs(save_path, exist_ok=True)
@@ -239,4 +257,4 @@ if __name__ == '__main__':
     main(build_url, verbose=verbose, save_path=save_path,
          test_prefix=test_prefix, count_failed=count_failed,
          run_diff=run_diff, diff_tool=diff_tool,
-         max_diff=max_diff)
+         max_diff=max_diff, skipped=skipped)
