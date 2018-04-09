@@ -48,6 +48,8 @@ def get_log(job_id):
     'Get a log of a specific job id'
     url = '/jobs/{}/log'.format(job_id)
     log = travis_request(url)
+    if isinstance(log, dict):
+        log = log['log']['body']
     with io.StringIO(log) as f:
         lines = [line.strip() for line in f.readlines()]
     return lines
@@ -127,6 +129,7 @@ def compare_failures_with_tool(jobs, *, diff_tool, diff_tool_args=None,
     all_keys = set()
     for id_, job_info in jobs.items():
         if 'log' not in job_info:
+            job_info['failed_logs'] = {}
             continue
 
         failed_logs = parse_log(id_, job_info['log'])
