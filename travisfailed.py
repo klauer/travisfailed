@@ -126,6 +126,9 @@ def compare_failures_with_tool(jobs, *, diff_tool, diff_tool_args=None,
 
     all_keys = set()
     for id_, job_info in jobs.items():
+        if 'log' not in job_info:
+            continue
+
         failed_logs = parse_log(id_, job_info['log'])
         job_info['failed_logs'] = failed_logs
         for key in failed_logs:
