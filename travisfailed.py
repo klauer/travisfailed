@@ -90,15 +90,23 @@ def list_jobs(jobs, *, file=sys.stdout):
 def parse_log(id_, lines):
     'Parse a log, returning a dictionary of failed_test to log lines'
     # TODO this is terrible
+    error_marker = '==================================== ERRORS ===================================='
     failure_marker = '=================================== FAILURES ==================================='  # noqa
     test_marker = re.compile('^.*_______+ (.*) __________+.*$')
     end_marker = re.compile('^.*=====+ .* in .* seconds ====+.*$')
 
-    try:
-        lines = lines[lines.index(failure_marker) + 1:]
-    except ValueError:
+    starting_points = []
+    for marker in (error_marker, failure_marker):
+        try:
+            starting_points.append(lines.index(marker))
+        except ValueError:
+            error_start = None
+
+    if not starting_points:
         print(f'ERROR: failed to parse job {id_}')
         return {}
+
+    lines = lines[min(starting_points) + 1:]
 
     failed_lines = {}
     current_test = None
@@ -108,6 +116,9 @@ def parse_log(id_, lines):
         if m:
             current_test = m.groups()[0]
             failed_lines[current_test] = []
+            continue
+        elif line in (failure_marker, error_marker):
+            current_test = None
             continue
 
         m = end_marker.match(line)
