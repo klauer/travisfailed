@@ -232,6 +232,7 @@ def main(build_url, *, verbose=False, save_path='build_logs',
             print()
 
     if skipped and skipped_tests:
+        print()
         print('Skip Count / Tests')
         print('---------------------')
         for test, count in skipped_tests.items():
@@ -239,9 +240,12 @@ def main(build_url, *, verbose=False, save_path='build_logs',
         print()
 
     if count_failed:
+        print()
         print('Failure Count / Tests')
         print('---------------------')
-        for test, count in failed_tests.items():
+        for test, count in sorted(
+                sorted(failed_tests.items()),
+                key=lambda x: x[1], reverse=True):
             print(f'{count} {test}')
         print()
 
