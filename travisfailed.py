@@ -71,8 +71,9 @@ def grep_log_for_tests(log_lines, test_path, *, markers=None,
         if any(m in line for m in markers):
             if verbose:
                 print(line)
-            if line.startswith(test_path):
-                test_name = line.split(' ', 1)[0]
+            if test_path in line:
+                test_name = next(l for l in line.split(' ')
+                                 if l.startswith(test_path))
                 failed_tests.append(test_name)
     return failed_tests
 
