@@ -57,8 +57,7 @@ def get_log(job_id):
 
 
 def get_job_desc(job):
-    env = job['config']['env'][:50]
-    return '{id} {state} {env}'.format(env=env, **job)
+    return '{id} py{python} {state} {env:.50}'.format(**job, **job['config'])
 
 
 def grep_log_for_tests(log_lines, test_path, *, markers=None,
